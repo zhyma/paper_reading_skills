@@ -1,4 +1,4 @@
-# Google Scholar 定期论文推送订阅 Prompt V2
+# Google Scholar 定期论文推送订阅 Prompt V3
 
 ## 版本控制（强制）
 
@@ -19,7 +19,44 @@
 
 ---
 
-## 1. 论文发现与原文获取
+## 1. 邮件处理范围与完整性（强制）
+
+每次运行时，先识别尚未处理的 Google Scholar 订阅/提醒邮件，并以“推送邮件”为单位逐封处理。
+
+### 1.1 必须处理邮件中的全部论文
+
+对于每一封需要处理的 Google Scholar 推送邮件：
+
+- 必须处理该邮件中列出的**所有论文**，不能只挑选看起来与当前研究相关的论文。
+- 不得因为一篇论文不属于 DLO 或 general robot manipulation 就跳过；如果不属于两类研究线，仍按后续规则保留基本信息并明确写“未纳入 A/B 两类”。
+- 只有完成该邮件中全部论文的检查、去重、分类和必要输出后，才认为该邮件已经处理完成。
+- 如果同一论文在同一封邮件或不同邮件中重复出现，仍按第 9 节去重规则处理，不重复分析。
+
+### 1.2 每封邮件输出时先标注推送日期
+
+处理每一封 Google Scholar 推送邮件时，该邮件对应输出的**第一行**必须写：
+
+`**推送日期：YYYY-MM-DD**`
+
+日期以 Gmail 中该推送邮件的实际接收日期为准。
+
+随后再逐篇输出该邮件中的论文。
+
+如果同一次运行需要处理多封推送邮件，则每封邮件分别建立自己的“推送日期”开头，不要把不同日期邮件中的论文混在同一个无日期分组中。
+
+### 1.3 当日无新推送时必须明确回报
+
+无论是否存在更早日期但尚未处理的历史邮件，都要单独检查**当前日期**是否收到新的 Google Scholar paper 推送。
+
+如果当前日期没有新的 Google Scholar paper 推送，必须明确输出：
+
+`本日无新推送。`
+
+如果当前日期无新推送，但仍存在此前尚未处理的旧推送，则先报告“本日无新推送”，随后继续处理这些尚未处理的历史推送。
+
+---
+
+## 2. 论文发现与原文获取
 
 Google Scholar 提醒仅作为论文发现入口。
 
@@ -41,7 +78,7 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 2. 每篇论文的信息栏（强制）
+## 3. 每篇论文的信息栏（强制）
 
 每篇论文开始时必须先输出两行信息。
 
@@ -49,13 +86,16 @@ Google Scholar 提醒仅作为论文发现入口。
 
 格式：
 
-**完整第一作者姓名 et al., Title, Venue Year**
+**完整第一作者姓名 et al., Title [原始链接](<Google Scholar 推送邮件中的论文原始 URL>), Venue Year**
 
 要求：
 
 - 第一作者必须尽可能使用完整姓名，即 given name + family name，不要只写姓，也不要在能够从论文原文确认完整姓名时只写首字母缩写。
 - 如果论文只有一位作者，则不加 `et al.`。
 - 作者与标题之间使用英文逗号 `, ` 分隔；标题与出处之间同样使用英文逗号 `, ` 分隔。
+- 论文标题后必须保留 Google Scholar 推送邮件中给出的**论文原始链接**，使用 Markdown 链接形式：`Title [原始链接](URL)`。
+- 这里的“原始链接”必须是邮件中实际提供的链接；即使后续为了阅读全文另外找到了 arXiv、作者主页或其他公开版本，也不要用这些后来找到的链接替换邮件原始链接。
+- 后续找到的公开全文 / arXiv 仅作为分析来源，不影响此处对 Scholar 邮件原始链接的保留。
 - 出处尽量写成简洁的 `Venue Year`，例如 `arXiv 2026`、`RA-L 2026`、`ICRA 2026`。
 - 示例：`Yijie Wang et al., Reconstruct, Practice, Go Real: Guided Self-Improvement for Embodied Agents, arXiv 2026`。
 
@@ -76,7 +116,7 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 3. 论文分类
+## 4. 论文分类
 
 将新论文首先分为以下两条研究线。
 
@@ -157,7 +197,134 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 4. 单篇论文信息提取原则
+## 5. 研究侧重点与实验任务归类（独立可修改段落）
+
+本节用于规定当前订阅任务在整理实验任务时的**领域侧重点**。如果未来研究方向变化，应优先修改本节，而不是改动整个 Prompt 的其他通用规则。
+
+当前侧重点是 **DLO / deformable-object robotics + general robot manipulation**。
+
+### 5.1 实验任务先做任务类型归类
+
+整理每篇论文的实验任务时，不仅要列出具体实验，还要先判断它们属于哪一类常见 manipulation task。
+
+优先使用以下任务类别：
+
+- **Grasping**
+- **Pick & Place**
+- **Pushing**
+- **Insertion**
+- **Folding**
+  - cloth folding
+  - towel folding
+  - garment folding
+- **Threading / Routing / Passing-through**
+- **Tying / Knotting / Looping**
+- **Regrasping / In-hand manipulation**
+- **Opening / Closing**
+- **Assembly / Disassembly**
+- **Tool use**
+- **其他**：若无法合理归入以上类别，则保留论文中的具体任务名称，不强行归类。
+
+对于可归类任务，推荐写成：
+
+`任务类别：具体实验任务`
+
+例如：
+
+- `Insertion：GPU insertion`
+- `Insertion：Ethernet cable plugging`
+- `Pushing：T-shaped object pushing`
+- `Folding：towel folding`
+- `Threading：cable threading through ring`
+
+### 5.2 DLO 相关任务必须突出显示
+
+实验任务中只要涉及 DLO / deformable object，就必须明确突出，不得淹没在一般任务列表中。
+
+DLO 相关对象包括但不限于：
+
+- cable
+- rope
+- ribbon
+- strap
+- wire
+- thread
+- hose
+- cloth
+- towel
+- garment
+- fabric
+- 其他明显具有柔性、可弯曲、可折叠或连续形变特征的对象
+
+输出时，在对应任务前加：
+
+`**[DLO]**`
+
+例如：
+
+- `**[DLO] Threading：cable threading through ring**`
+- `**[DLO] Routing：rope routing**`
+- `**[DLO] Folding：towel folding**`
+
+如果同一篇论文同时包含 rigid-object task 和 DLO task，必须分别列出，并优先保证 DLO 任务清晰可见。
+
+### 5.3 Household tasks 单独归类
+
+将明显属于家庭日常环境的机器人任务额外标记为：
+
+`Household task`
+
+Household tasks 包括但不限于：
+
+- 厨房操作
+- 餐桌整理
+- 物品收纳
+- drawer / cabinet opening and closing
+- laundry
+- cloth / towel / garment handling
+- bed making
+- cleaning
+- household object pick-and-place
+- food preparation
+- 其他明确以家庭环境或家务为应用背景的 manipulation task
+
+推荐写法：
+
+- `Household task｜Pick & Place：table clearing`
+- `Household task｜Opening / Closing：drawer opening`
+- `Household task｜**[DLO] Folding：towel folding**`
+
+这一标记与前述 manipulation task 类型并行，不互相排斥。
+
+如果某项任务既属于 DLO 又属于 Household task，应同时保留两个属性。
+
+### 5.4 任务整理的最终原则
+
+实验任务字段应优先体现：
+
+`领域属性（如 DLO / Household） → 常见任务类别 → 具体对象 / 动作`
+
+不要只写非常宽泛的任务名称。
+
+例如优先写：
+
+`**[DLO] Insertion：cable connector insertion**`
+
+而不是只写：
+
+`insertion`
+
+优先写：
+
+`Household task｜Folding：towel folding`
+
+而不是只写：
+
+`household manipulation`
+
+---
+
+## 6. 单篇论文信息提取原则
 
 不需要执行完整 paper-reading 流程，也不要生成长篇论文摘要。
 
@@ -188,9 +355,9 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 5. 实验任务提取
+## 7. 实验任务提取
 
-无论属于 DLO 类还是 general robot manipulation 类，都必须尽量列出论文中的所有主要实验任务。
+无论属于 DLO 类还是 general robot manipulation 类，都必须尽量列出论文中的所有主要实验任务，并按照第 5 节先进行任务类型归类；DLO 相关任务必须使用 `**[DLO]**` 突出，Household task 必须额外标记。
 
 不要只写：
 
@@ -200,16 +367,16 @@ Google Scholar 提醒仅作为论文发现入口。
 
 而应尽量列出具体任务，例如：
 
-- GPU insertion
-- GPU removal
-- Ethernet cable plugging
-- Ethernet cable unplugging
-- peg insertion
-- drawer opening
-- cable threading
-- rope routing
-- connector insertion
-- knot tying
+- `Insertion：GPU insertion`
+- `Assembly / Disassembly：GPU removal`
+- `Insertion：Ethernet cable plugging`
+- `Assembly / Disassembly：Ethernet cable unplugging`
+- `Insertion：peg insertion`
+- `Household task｜Opening / Closing：drawer opening`
+- `**[DLO] Threading：cable threading`
+- `**[DLO] Routing：rope routing`
+- `Insertion：connector insertion`
+- `**[DLO] Tying / Knotting：knot tying`
 
 实验任务只需记录：**任务名称 + 对象 / 动作**。
 
@@ -217,13 +384,13 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 6. 输出格式（强制使用竖排两列表格）
+## 8. 输出格式（强制使用竖排两列表格）
 
 为了适配聊天页面宽度，禁止使用需要横向滚动的多列表格。所有论文均使用“左栏 = 字段，右栏 = 内容”的两列表格。
 
 ### A. DLO / deformable-object robotics
 
-先输出第 2 节规定的两行论文信息，然后使用：
+在对应推送邮件的 `推送日期` 行之后，先输出第 3 节规定的两行论文信息，然后使用：
 
 | 字段 | 内容 |
 |---|---|
@@ -234,14 +401,14 @@ Google Scholar 提醒仅作为论文发现入口。
 
 字段要求：
 
-- **实验任务**：尽量列出所有主要任务，具体到对象与动作。
+- **实验任务**：尽量列出所有主要任务，具体到对象与动作，并按第 5 节进行任务类型归类；DLO 任务使用 `**[DLO]**` 突出，Household task 额外标记。
 - **Perception / Representation**：只写理解方法所必需的 sensor / observation / state representation / object representation / geometric or learned representation。
 - **Method / Planning / Control**：必须遵守“整体框架 → 模块拆分 → 必要细节”的层级，不得直接从细粒度技术链条开始。
 - **Feedback**：说明 open-loop / closed-loop、visual / tactile / force feedback、replanning、correction、failure recovery 等；若论文没有明确说明，写“未说明”。
 
 ### B. General robot manipulation
 
-先输出第 2 节规定的两行论文信息，然后使用：
+在对应推送邮件的 `推送日期` 行之后，先输出第 3 节规定的两行论文信息，然后使用：
 
 | 字段 | 内容 |
 |---|---|
@@ -254,7 +421,7 @@ Google Scholar 提醒仅作为论文发现入口。
 字段要求：
 
 #### 实验任务
-列出论文中的所有主要实验任务，尽量具体到对象与动作。
+列出论文中的所有主要实验任务，尽量具体到对象与动作，并按第 5 节进行任务类型归类；DLO 任务使用 `**[DLO]**` 突出，Household task 额外标记。
 
 #### 技术路线
 必须由整体到细节：
@@ -294,7 +461,7 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 7. 去重规则
+## 9. 去重规则
 
 对论文进行跨邮件、跨运行去重：
 
@@ -307,9 +474,11 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 8. 不需要执行的内容
+## 10. 不需要执行的内容
 
 不要：
+
+- 只挑选一封 Scholar 推送邮件中的部分论文而忽略其他论文；
 
 - 给出“精读 / 浏览 / 可跳过”等阅读建议；
 - 给论文打分；
@@ -323,9 +492,9 @@ Google Scholar 提醒仅作为论文发现入口。
 
 ---
 
-## 9. 总体目标
+## 11. 总体目标
 
-该任务不是论文推荐器，而是持续运行的科研信息监控与技术路线记录工具。
+该任务不是论文推荐器，而是持续运行的科研信息监控与技术路线记录工具。每次运行还必须检查本日是否有新的 Google Scholar paper 推送；若没有，明确回报“本日无新推送”。
 
 通过持续处理新的 Google Scholar 推送，分别回答：
 
